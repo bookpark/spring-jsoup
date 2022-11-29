@@ -123,4 +123,30 @@ public class JsoupController {
         return sb.toString();
     }
 
+    // 강사, 설명, 기술스택
+    @GetMapping("api/course")
+    public String course() {
+        final String inflearnUrl = "https://www.inflearn.com/courses/it-programming";
+        Connection conn = Jsoup.connect(inflearnUrl);
+        // Buffer는 동기화, Builder는 동기화X
+        StringBuilder sb = new StringBuilder();
+        try {
+            Document document = conn.get();
+            Elements instructors = document.select("div.instructor");
+            Elements descriptions = document.select("p.course_description");
+            Elements skills = document.select("div.course_skills>span");
+            for (int i = 0; i < instructors.size(); i++) {
+                String instructor = instructors.get(i).text();
+                String description = descriptions.get(i).text();
+                String skill = skills.get(i).text();
+
+                sb.append(instructor).append("<br />").append(description).append("<br />")
+                        .append(skill).append("<br />").append("<br />");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return sb.toString();
+    }
+
 }
