@@ -8,6 +8,8 @@ import org.jsoup.select.Elements;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Objects;
+
 @RestController
 public class JsoupController {
     //썸네일 링크
@@ -20,9 +22,8 @@ public class JsoupController {
         try {
             Document document = conn.get();
             Elements imgUrlElements = document.getElementsByClass("swiper-lazy");
-            Elements course_title = document.getElementsByClass("course_title");
             for (Element element : imgUrlElements) {
-                sb.append(element.attr("abs:src")).append("<br />").append(course_title);
+                sb.append(element.attr("abs:src")).append("<br />");
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -91,4 +92,35 @@ public class JsoupController {
         str = str.replaceAll(",", "");
         return Integer.parseInt(str);
     }
+
+    @GetMapping("/api/rating")
+    public String rating() {
+        final String inflearnUrl = "https://www.inflearn.com/courses/it-programming";
+        Connection conn = Jsoup.connect(inflearnUrl);
+        // Buffer는 동기화, Builder는 동기화X
+        StringBuilder sb = new StringBuilder();
+        try {
+            Document document = conn.get();
+            Elements courseUrl = document.select("a.course_card_front");
+            for (Element element : courseUrl) {
+                String innerUrl = element.attr("abs:href");
+                Connection innerConn = Jsoup.connect(innerUrl);
+                Document innerDoc = innerConn.get();
+                Element ratingElement = innerDoc.selectFirst("div.dashboard-star__num");
+
+                // 긁어온 값은 String이기 때문에 double로 변환 작업
+                double rating = Objects.isNull(ratingElement) ?
+                        0.0 :
+                        Double.parseDouble(ratingElement.text());
+                rating = Math.round(rating * 10) / 10.0;
+
+                sb.append(innerUrl).append(" , 평점: ").append(rating).append("<br />");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return sb.toString();
+    }
+
 }
