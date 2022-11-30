@@ -1,17 +1,25 @@
 package mini.jsoup.controller;
 
+import lombok.RequiredArgsConstructor;
+import mini.jsoup.domain.Course;
+import mini.jsoup.repository.CourseRepository;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.orm.jpa.JpaSystemException;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Objects;
 
 @RestController
+@RequiredArgsConstructor
 public class InflearnController {
+
+    private final CourseRepository courseRepository;
 
     final String inflearnUrl = "https://www.inflearn.com/courses/it-programming?order=seq&page=";
     private final int FIRST_PAGE_INDEX = 1;
@@ -38,45 +46,66 @@ public class InflearnController {
 
 
                 for (int j = 0; j < images.size(); j++) {
-                    String image = images.get(j).attr("abs:src");
-                    String title = titles.get(j).text();
-                    String price = prices.get(j).text();
-                    int realPrice = 0, salePrice = 0;
-                    if (!price.equals("무료")) {
-                        realPrice = toInt(getRealPrice(price).replace("\\₩", ""));
-                        salePrice = toInt(getSalePrice(price).replace("\\₩", ""));
+                    try {
+                        String image = images.get(j).attr("abs:src");
+                        String title = titles.get(j).text();
+                        String price = prices.get(j).text();
+                        int realPrice = 0, salePrice = 0;
+                        if (!price.equals("무료")) {
+                            realPrice = toInt(getRealPrice(price).replace("\\₩", ""));
+                            salePrice = toInt(getSalePrice(price).replace("\\₩", ""));
+                        }
+                        String instructor = instructors.get(j).text();
+                        String description = descriptions.get(j).text();
+                        String skill = skills.get(j).text();
+
+                        String innerUrl = urls.get(j).attr("abs:href");
+
+                        Connection innerConn = Jsoup.connect(innerUrl);
+                        Document innerDoc = innerConn.get();
+
+                        Element ratings = innerDoc.selectFirst("div.dashboard-star__num");
+                        double rating = Objects.isNull(ratings) ? 0.0 : Double.parseDouble(ratings.text());
+                        rating = Math.round(rating * 10) / 10.0;
+
+//                    sb.append(image).append("<br />");
+//                    sb.append(title).append("<br />");
+//                    sb.append(price).append("<br />");
+//                    if (realPrice != salePrice) {
+//                        sb.append(salePrice).append("<br />");
+//                    }
+//
+//                    sb.append(instructor).append("<br />");
+//                    sb.append(innerUrl).append("<br />");
+//                    sb.append(description).append("<br />");
+//                    sb.append(skill).append("<br />");
+//                    sb.append(rating).append("<br />").append("<br />");
+
+
+//                        Course course = new Course();
+//                        course.setThumbnail(image);
+//                        course.setTitle(title);
+//                        course.setDescription(description);
+//                        course.setRealprice(realPrice);
+//                        course.setSaleprice(salePrice);
+//                        course.setInstructor(instructor);
+//                        course.setLink(innerUrl);
+//                        course.setSkill(skill);
+//                        course.setRating(rating);
+                        courseRepository.save(new Course(null, image, title, description, realPrice, salePrice,
+                                instructor, innerUrl, skill, rating));
+                    } catch (JpaSystemException je) {
+                        je.printStackTrace();
                     }
-                    String instructor = instructors.get(j).text();
-                    String description = descriptions.get(j).text();
-                    String skill = skills.get(j).text();
 
-                    String innerUrl = urls.get(j).attr("abs:href");
-
-                    Connection innerConn = Jsoup.connect(innerUrl);
-                    Document innerDoc = innerConn.get();
-
-                    Element ratings = innerDoc.selectFirst("div.dashboard-star__num");
-                    double rating = Objects.isNull(ratings) ? 0.0 : Double.parseDouble(ratings.text());
-                    rating = Math.round(rating * 10) / 10.0;
-
-                    sb.append(image).append("<br />");
-                    sb.append(title).append("<br />");
-                    sb.append(price).append("<br />");
-                    if (realPrice != salePrice) {
-                        sb.append(salePrice).append("<br />");
-                    }
-
-                    sb.append(instructor).append("<br />");
-                    sb.append(innerUrl).append("<br />");
-                    sb.append(description).append("<br />");
-                    sb.append(skill).append("<br />");
-                    sb.append(rating).append("<br />").append("<br />");
                 }
             }
+            return "다운로드 성공";
         } catch (Exception e) {
             e.printStackTrace();
+            return "다운로드 실패";
         }
-        return sb.toString();
+//        return sb.toString();
 
     }
 
